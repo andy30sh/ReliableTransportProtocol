@@ -467,6 +467,7 @@ int main(void)
   }
 
  terminate:
+  printf(" \n === Result === \n\n ");
   printf(" Simulator terminated at time %f\n after attempting to send %d msgs from layer5\n",time,nsim);
   printf("number of messages dropped due to full window:  %d \n", window_full);
   printf("number of valid (not corrupt or duplicate) acknowledgements received at A:  %d \n", new_ACKs);
