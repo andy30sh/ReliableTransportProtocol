@@ -44,21 +44,23 @@ bool IsCorrupted(struct pkt packet)
     return (true);
 }
 
-/* Buffer data sturcture */
+/* Buffer data sturcture for both A and B */
 struct buffer {
   struct pkt packets[WINDOWSIZE];
   int size;
 };
 
+/* Insert packet into buffer order by packet number */
 void insert_pkt(struct buffer *pkts, struct pkt new_pkt) {
   int i;
 
   if (pkts->size >= WINDOWSIZE)      
       return;  
 
+  /* Check whether the packet exists */
   for (i = 0; i < pkts->size; i++) 
       if (pkts->packets[i].seqnum == new_pkt.seqnum)          
-          return;        
+          return;
 
   i = pkts->size - 1;
   while (i >= 0 && pkts->packets[i].seqnum > new_pkt.seqnum) {
@@ -70,6 +72,7 @@ void insert_pkt(struct buffer *pkts, struct pkt new_pkt) {
   pkts->size++;
 }
 
+/* Remove packet by packet number and return it */
 struct pkt remove_pkt(struct buffer *pkts, int seqnum) {
   int i;
   int index;
@@ -99,6 +102,7 @@ struct pkt remove_pkt(struct buffer *pkts, int seqnum) {
   return removed_pkt;
 }
 
+/* Print out the buffer elements */
 void print_pkts(int type, struct buffer *pkts) {
   int i;
 
@@ -111,15 +115,16 @@ void print_pkts(int type, struct buffer *pkts) {
 }
 /* End buffer data sturcture */
 
+
 /********* Sender (A) variables and functions ************/
 
 static struct buffer A_buffer;    /* data structure for storing packets waiting for ACK */
-static int A_nextseqnum;              /* the next sequence number to be used by the sender */
+static int A_nextseqnum;          /* the next sequence number to be used by the sender */
 
 /* called from layer 5 (application layer), passed the message to be sent to other side */
 void A_output(struct msg message)
 {
-  struct pkt sendpkt;
+  struct pkt sendpkt;   /* packet send to layer 3 */
   int i;
 
   if ( A_buffer.size < WINDOWSIZE ) {
@@ -148,6 +153,7 @@ void A_output(struct msg message)
     /* get next sequence number, wrap back to 0 */
     A_nextseqnum++;
 
+    /* Debug purprose */
     if (DEBUG > 0) {
       printf("A Next: %d\n", A_nextseqnum);
       print_pkts(A, &A_buffer);
@@ -189,6 +195,7 @@ void A_input(struct pkt packet)
           printf ("----A: duplicate ACK received, do nothing!\n");
     }
 
+    /* Debug purprose */
     if (DEBUG > 0) {
       printf("A Next: %d\n", A_nextseqnum);
       print_pkts(A, &A_buffer);
@@ -196,8 +203,7 @@ void A_input(struct pkt packet)
   } else {
     if (TRACE > 0)
       printf ("----A: corrupted ACK is received, do nothing!\n");
-  }
-  
+  }  
 }
 
 /* called when A's timer goes off */
@@ -212,16 +218,20 @@ void A_timerinterrupt(void)
     if (TRACE > 0)
       printf ("---A: resending packet %d\n", A_buffer.packets[i].seqnum);
 
+    /* resend packet */
     tolayer3(A, A_buffer.packets[i]);
     packets_resent++;
     
+    /* set timer if buffer not empty */
     if (A_buffer.size > 0) starttimer(A, RTT);
 
+    /* Debug purprose */
     if (DEBUG > 0) {
       printf("A Next: %d\n", A_nextseqnum);
       print_pkts(A, &A_buffer);
     }
 
+    /* only resent first buffered packet */
     break;
   }
 }
@@ -236,13 +246,13 @@ void A_init(void)
 /********* Receiver (B)  variables and procedures ************/
 
 static struct buffer B_buffer;    /* data structure for storing packets waiting for send to layer 5 */
-static int B_nextseqnum;              /* the next sequence number to be used by the reciver */
+static int B_nextseqnum;          /* the next sequence number to be used by the reciver */
 
 /* called from layer 3, when a packet arrives for layer 4 at B*/
 void B_input(struct pkt packet)
 {
-  struct pkt sendpkt;
-  struct pkt ackpkt;
+  struct pkt sendpkt;   /* packet send to layer 5 */
+  struct pkt ackpkt;    /* ACK packet send to layer 3 */
   int i;
 
   /* create ACK packet */
@@ -270,6 +280,7 @@ void B_input(struct pkt packet)
     packet.acknum = packet.seqnum;
     insert_pkt(&B_buffer, packet);
 
+    /* scan expected packet, send it to layer 5 */
     while (B_buffer.packets[0].seqnum == B_nextseqnum) {
       sendpkt = remove_pkt(&B_buffer, B_nextseqnum);
       /* deliver to receiving application */
@@ -282,6 +293,7 @@ void B_input(struct pkt packet)
     /* send out packet */
     tolayer3 (B, ackpkt);
 
+    /* Debug purprose */
     if (DEBUG > 0) {
       printf("B Next: %d\n", B_nextseqnum);
       print_pkts(B, &B_buffer);
