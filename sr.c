@@ -5,15 +5,6 @@
 #include "emulator.h"
 #include "sr.h"
 
-/* ******************************************************************
-    Computer Network and Application COMP_SCI_4310
-    Programming Assignment 2
-    Reliable Transport with Selective Repeat
-    
-    by YUEN YUEN (a1836569)
-    25 April 2023
-**********************************************************************/
-
 #define RTT  16.0       /* round trip time.  MUST BE SET TO 16.0 when submitting assignment */
 #define WINDOWSIZE 6    /* the maximum number of buffered unacked packet */
 #define NOTINUSE (-1)   /* used to fill header fields that are not being used */
